@@ -436,6 +436,12 @@ pub(crate) fn save_to(s: &mut Session, path: &str) -> Result<usize> {
 /// Save to `path` with `opts`. A drawing file then keeps the version and binary choice: the
 /// version goes into the drawing's `$ACADVER`, so later saves (QSAVE) write it again.
 fn save_as(s: &mut Session, cmd: &str, path: &str, opts: &SaveAs) -> Result<usize> {
+    save_as_with(s, cmd, path, opts, store)
+}
+
+/// `save_as` with the file's destination handed in: [`store`] writes a file and its backup;
+/// [`save_as_bytes`] hands the bytes to a host that keeps the document itself.
+fn save_as_with(s: &mut Session, cmd: &str, path: &str, opts: &SaveAs, store: impl FnOnce(&str, &[u8]) -> Result<()>) -> Result<usize> {
     if s.doc()?.refedit.is_some() {
         return Err(bad(cmd, "A block reference is being edited in place: finish with REFCLOSE (Save or Discard) before saving."));
     }
@@ -452,6 +458,18 @@ fn save_as(s: &mut Session, cmd: &str, path: &str, opts: &SaveAs) -> Result<usiz
         }
     }
     Ok(n)
+}
+
+/// The drawing `save_as` would write at `path`, the bytes returned instead of stored: a host
+/// without a file system (an embedding app) keeps them in its own document store. A drawing file
+/// is marked saved under `path` all the same, so QSAVE stays quiet until the next change.
+pub fn save_as_bytes(s: &mut Session, path: &str, opts: &SaveAs) -> Result<Vec<u8>> {
+    let mut out = Vec::new();
+    save_as_with(s, "save", path, opts, |_, written| {
+        out = written.to_vec();
+        Ok(())
+    })?;
+    Ok(out)
 }
 
 /// Put saved bytes where the user gets them: natively the file at `path`; on the web, which has

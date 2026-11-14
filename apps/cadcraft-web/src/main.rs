@@ -114,20 +114,8 @@ mod web {
 
     pub fn start() {
         eframe::WebLogger::init(log::LevelFilter::Info).ok();
-        cadcraft_engine::cmd::file::set_io(cadcraft_engine::cmd::file::IoHooks {
-            read: |b, name| cadcraft_io::read(b, name).map_err(|e| e.to_string()),
-            write: |d, name| cadcraft_io::write(d, name).map_err(|e| e.to_string()),
-            plot: Some(|d, space, opts| cadcraft_io::plotter::plot(d, space, opts).map_err(|e| e.to_string())),
-        });
-        cadcraft_engine::cmd::file::set_image_decoder(|b| cadcraft_io::raster::decode(b).map_err(|e| e.to_string()));
-        cadcraft_engine::cmd::file::set_write_as(|d, name, o| {
-            cadcraft_io::write_with(d, name, &cadcraft_io::SaveOptions { version: o.version, binary: o.binary }).map_err(|e| e.to_string())
-        });
-        // AutoLISP's entget, entmake and entmod see entities as DXF groups.
-        cadcraft_engine::cmd::file::set_entity_codec(cadcraft_engine::cmd::file::EntityCodec {
-            groups: cadcraft_io::entity_groups,
-            entity: cadcraft_io::entity_from_groups,
-        });
+        // File format hooks for the engine (it stays I/O-agnostic), shared with every host.
+        cadcraft_ui_egui::host::install_io();
         let Some(canvas) = app_canvas() else {
             log::error!("missing <canvas id=\"{CANVAS_ID}\">");
             return;

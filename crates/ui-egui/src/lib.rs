@@ -49,6 +49,7 @@ pub mod dyngrips;
 pub mod dyninput;
 pub mod gpu;
 pub mod grip_dyn;
+pub mod host;
 pub mod i18n;
 pub mod icons;
 pub mod keys;
